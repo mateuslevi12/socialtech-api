@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tasks {
+  id        Int      @id @default(autoincrement())
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id       String   @id @default(cuid())
+  name     String
+  email    String   @unique
+  password String
+  profile  Profile?
+}
+
+model Profile {
+  id          String  @id @default(cuid())
+  username    String? @unique
+  description String?
+  userId      String  @unique
+  user        User    @relation(fields: [userId], references: [id])
+  posts       Posts[]
+
+  followers  Follows[]  @relation("ProfileFollowers")
+  following  Follows[]  @relation("ProfileFollowing")
+  comments   Comments[]
+  chats      Chat[]     @relation("ProfileChats")
+  messages   Message[]  @relation("ProfileSender")
+  likedPosts Like[]
+}
+
+model Follows {
+  followerId  String
+  followingId String
+
+  follower  Profile @relation("ProfileFollowers", fields: [followerId], references: [id])
+  following Profile @relation("ProfileFollowing", fields: [followingId], references: [id])
+
+  @@id([followerId, followingId])
+}
+
+model Posts {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile   Profile? @relation(fields: [profileId], references: [id])
+  profileId String?
+
+  comments Comments[]
+  likes    Like[]
+}
+
+model Like {
+  id     String  @id @default(cuid())
+  postId String
+  userId String
+  post   Posts   @relation(fields: [postId], references: [id])
+  user   Profile @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId]) // Garante que um usuário não possa curtir o mesmo post mais de uma vez
+}
+
+model Comments {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      Posts    @relation(fields: [postId], references: [id])
+  postId    String
+  likes     Int      @default(0)
+  profile      Profile  @relation(fields: [profileId], references: [id])
+  profileId String
+}
+
+model Chat {
+  id       String    @id @default(cuid())
+  messages Message[]
+  profiles Profile[] @relation("ProfileChats")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    String
+
+  sender    Profile @relation("ProfileSender", fields: [profileId], references: [id])
+  profileId String
+}
+
+model MessagesChatBot {
+  id         String    @id @default(cuid())
+  threadId   String
+  userName   String
+  created_at DateTime  @default(now())
+}
